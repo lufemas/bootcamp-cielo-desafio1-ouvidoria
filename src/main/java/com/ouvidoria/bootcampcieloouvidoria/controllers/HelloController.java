@@ -1,4 +1,4 @@
-package com.ouvidoria.bootcampcieloouvidoria.controller;
+package com.ouvidoria.bootcampcieloouvidoria.controllers;
 
 
 import org.springframework.web.bind.annotation.GetMapping;
