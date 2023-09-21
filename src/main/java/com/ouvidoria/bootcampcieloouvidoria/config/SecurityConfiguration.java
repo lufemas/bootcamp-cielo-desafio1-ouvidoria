@@ -16,7 +16,8 @@ public class SecurityConfiguration {
             new AntPathRequestMatcher("/swagger-ui.html/**"),
             new AntPathRequestMatcher("/swagger-ui/**"),
             new AntPathRequestMatcher("/api-docs/**"),
-            new AntPathRequestMatcher("/h2-console/**")
+            new AntPathRequestMatcher("/h2-console/**"),
+            new AntPathRequestMatcher("/feedback"),
     };
 
     @Bean
