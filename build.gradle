@@ -31,6 +31,16 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	implementation group: 'org.springdoc', name: 'springdoc-openapi-starter-webmvc-ui', version: '2.0.2'
+
+	implementation enforcedPlatform('software.amazon.awssdk:bom:2.20.123')
+
+	implementation 'software.amazon.awssdk:secretsmanager'
+	implementation 'software.amazon.awssdk:sns'
+	implementation 'software.amazon.awssdk:sqs'
+	implementation 'software.amazon.awssdk:ssooidc'
+	implementation 'software.amazon.awssdk:sso'
+	implementation 'software.amazon.awssdk:iam-policy-builder'
+	implementation 'software.amazon.awssdk:sts'
 }
 
 tasks.named('test') {
