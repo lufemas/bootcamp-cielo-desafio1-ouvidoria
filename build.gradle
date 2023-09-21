@@ -31,6 +31,9 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	implementation group: 'org.springdoc', name: 'springdoc-openapi-starter-webmvc-ui', version: '2.0.2'
+	implementation 'com.amazonaws:aws-java-sdk-sns:1.11.1017' // Use the appropriate version
+//	implementation group: 'com.amazonaws', name: 'aws-java-sdk-sns', version: '1.9.3'
+
 }
 
 tasks.named('test') {
