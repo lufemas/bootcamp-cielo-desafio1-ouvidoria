@@ -3,10 +3,10 @@ package com.ouvidoria.bootcampcieloouvidoria.services;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sns.SnsClient;
-import software.amazon.awssdk.services.sns.model.*;
+import software.amazon.awssdk.services.sns.model.PublishRequest;
+import software.amazon.awssdk.services.sns.model.PublishResponse;
+import software.amazon.awssdk.services.sns.model.SnsException;
 import software.amazon.awssdk.services.sns.paginators.ListTopicsIterable;
-
-import java.util.Map;
 
 public class SnsService {
 
