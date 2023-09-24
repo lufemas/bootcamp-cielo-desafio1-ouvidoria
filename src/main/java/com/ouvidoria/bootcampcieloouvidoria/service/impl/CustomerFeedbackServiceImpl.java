@@ -1,5 +1,6 @@
 package com.ouvidoria.bootcampcieloouvidoria.service.impl;
 
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sns.model.PublishRequest;
 import com.amazonaws.services.sns.model.Topic;
@@ -10,11 +11,15 @@ import com.ouvidoria.bootcampcieloouvidoria.dto.CustomerFeedbackResponseDTO;
 import com.ouvidoria.bootcampcieloouvidoria.dto.FeedbackQueueSizeResponseDTO;
 import com.ouvidoria.bootcampcieloouvidoria.dto.enums.FeedbackStatus;
 import com.ouvidoria.bootcampcieloouvidoria.dto.enums.FeedbackType;
+import com.ouvidoria.bootcampcieloouvidoria.models.CustomerFeedbackModel;
+import com.ouvidoria.bootcampcieloouvidoria.repositories.CustomerFeedbackRepository;
 import com.ouvidoria.bootcampcieloouvidoria.service.exceptions.InvalidFeedbackTypeException;
 import com.ouvidoria.bootcampcieloouvidoria.service.exceptions.TopicNotFoundException;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.ouvidoria.bootcampcieloouvidoria.dto.CustomerFeedbackRequestDTO;
 import com.ouvidoria.bootcampcieloouvidoria.service.CustomerFeedbackService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -27,6 +32,9 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
 
     @Autowired
     private AmazonSQSClient amazonSQSClient;
+
+    @Autowired
+    private CustomerFeedbackRepository customerFeedbackRepository;
 
     @Override
     public String sendFeedback(CustomerFeedbackRequestDTO feedback) {
@@ -138,9 +146,9 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
 
             CustomerFeedbackResponseDTO customerFeedbackResponseDTO = new CustomerFeedbackResponseDTO();
             customerFeedbackResponseDTO.setId(message.getMessageId());
-            customerFeedbackResponseDTO.setType(FeedbackType.SUGGESTION);
+            customerFeedbackResponseDTO.setType(FeedbackType.SUGGESTION.label);
             customerFeedbackResponseDTO.setMessage(message.getBody());
-            customerFeedbackResponseDTO.setStatus(FeedbackStatus.IN_PROCESS);
+            customerFeedbackResponseDTO.setStatus(FeedbackStatus.IN_PROCESS.label);
 
             //jsonObject.put("type", message.getMessageAttributes().get("type").getStringValue());
             //jsonObject.put("status", message.getMessageAttributes().get("status").getStringValue());
@@ -148,5 +156,14 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
         }
         // return JSON array as response body
         return customerFeedbackResponseDTOS;
+    }
+
+    @Override
+    public CustomerFeedbackResponseDTO createFeedbackDatabase(CustomerFeedbackRequestDTO feedback) {
+        CustomerFeedbackModel customerFeedbackModel = customerFeedbackRepository.save(new CustomerFeedbackModel(feedback));
+
+        CustomerFeedbackResponseDTO customer = new CustomerFeedbackResponseDTO(customerFeedbackModel);
+
+        return customer;
     }
 }

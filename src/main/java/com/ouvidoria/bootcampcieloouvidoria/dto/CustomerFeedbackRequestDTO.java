@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
+import java.util.UUID;
+
 @Data
 @RequiredArgsConstructor
 public class CustomerFeedbackRequestDTO {
