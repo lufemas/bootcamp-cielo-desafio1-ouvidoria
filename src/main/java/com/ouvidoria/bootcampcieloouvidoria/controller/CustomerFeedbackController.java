@@ -6,6 +6,8 @@ import com.ouvidoria.bootcampcieloouvidoria.dto.CustomerFeedbackResponseDTO;
 import com.ouvidoria.bootcampcieloouvidoria.dto.FeedbackQueueSizeResponseDTO;
 import com.ouvidoria.bootcampcieloouvidoria.models.CustomerFeedbackModel;
 import com.ouvidoria.bootcampcieloouvidoria.service.CustomerFeedbackService;
+import com.ouvidoria.bootcampcieloouvidoria.threads.GetPraiseMessageThread;
+import com.ouvidoria.bootcampcieloouvidoria.threads.GetSuggestionMessageThread;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpStatus;
@@ -21,11 +23,13 @@ import java.util.List;
 public class CustomerFeedbackController {
 
     private final CustomerFeedbackService customerFeedbackService;
+    public GetSuggestionMessageThread suggestionMessage;
+
 
     @PostMapping
-    public ResponseEntity<CustomerFeedbackResponseDTO> sendFeedback(@RequestBody CustomerFeedbackRequestDTO feedback) {
-        customerFeedbackService.sendFeedback(feedback);
-        return new ResponseEntity<>(customerFeedbackService.createFeedbackDatabase(feedback), HttpStatus.CREATED);
+    public ResponseEntity<String> sendFeedback(@RequestBody CustomerFeedbackRequestDTO feedback) {
+        //customerFeedbackService.createFeedbackDatabase(feedback);
+        return new ResponseEntity<>(customerFeedbackService.sendFeedback(feedback), HttpStatus.CREATED);
     }
 
     @GetMapping("/size")
@@ -36,5 +40,11 @@ public class CustomerFeedbackController {
     @GetMapping("/{type}")
     public ResponseEntity<List<CustomerFeedbackResponseDTO>> getQueuedFeedbackByType(@PathVariable String type) {
         return new ResponseEntity<>(customerFeedbackService.getQueuedFeedbackByType(type), HttpStatus.OK);
+    }
+
+
+    @GetMapping("/message/{type}")
+    public ResponseEntity<String> getMessage(@PathVariable String type ) {
+        return new ResponseEntity<>(customerFeedbackService.getMessage(type), HttpStatus.OK);
     }
 }

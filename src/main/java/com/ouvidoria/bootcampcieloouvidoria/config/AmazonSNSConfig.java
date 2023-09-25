@@ -18,7 +18,7 @@ public class AmazonSNSConfig {
         return (AmazonSNSClient) AmazonSNSClientBuilder.standard().withRegion(Regions.US_EAST_1)
                 .withCredentials(
                         new AWSStaticCredentialsProvider(
-                                new BasicAWSCredentials("AKIA2XL77O3B3NX6NLEP", "nTOmAU9mNHXEc9a4HD3njlSt6miZ1msIbgj/FeB8")
+                                new BasicAWSCredentials("AKIAVDSQS2ZKQ4FJLK7E", "gK54ogxg8GXLoubW/WgHx1HjTlMYG6iqj2k0GIjO")
                         )
                 ).build();
     }

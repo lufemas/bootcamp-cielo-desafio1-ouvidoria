@@ -23,10 +23,12 @@ public class CustomerFeedbackModel implements Serializable {
     private String type;
     private String status;
     private String message;
+    private UUID messageId;
 
     public CustomerFeedbackModel(CustomerFeedbackRequestDTO customer) {
         this.message = customer.getMessage();
         this.type = customer.getType().label;
         this.status = FeedbackStatus.RECEIVED.label;
+        this.messageId = customer.getIdMessage();
     }
 }

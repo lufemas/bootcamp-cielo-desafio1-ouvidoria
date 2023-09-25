@@ -3,6 +3,7 @@ package com.ouvidoria.bootcampcieloouvidoria.service.impl;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sns.model.PublishRequest;
+import com.amazonaws.services.sns.model.PublishResult;
 import com.amazonaws.services.sns.model.Topic;
 import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.amazonaws.services.sqs.model.*;
@@ -22,6 +23,7 @@ import com.ouvidoria.bootcampcieloouvidoria.service.CustomerFeedbackService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import javax.sound.midi.SysexMessage;
 import java.util.*;
 
 @Service
@@ -42,32 +44,12 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
             throw new InvalidFeedbackTypeException(feedback.getType().toString());
         }
 
-        // get topic ARN by feedback type
-        String topicArn = amazonSNSClient.listTopics().getTopics().stream()
-                .filter(t -> t.getTopicArn().endsWith(feedback.getType().label + ".fifo"))
-                .findFirst()
-                .map(Topic::getTopicArn)
-                .orElse(null);
-        // publish feedback message to SNS topic
-        if (topicArn != null) {
-            PublishRequest publishRequest = new PublishRequest(topicArn, feedback.getMessage(), feedback.getType().toString())
-                                                    .withMessageDeduplicationId(UUID.randomUUID().toString())
-                                                    .withMessageGroupId(feedback.getType().label);
-            Map<String,MessageAttributeValue> messageAttributes = new HashMap<>();
-            MessageAttributeValue type = new MessageAttributeValue();
-            type.setDataType("String");
-            type.setStringValue(feedback.getType().toString());
-            messageAttributes.put("type", type);
-            MessageAttributeValue status = new MessageAttributeValue();
-            status.setDataType("String");
-            status.setStringValue("RECEIVED");
-            messageAttributes.put("status", status);
-            publishRequest.setMessageAttributes(messageAttributes);
-            amazonSNSClient.publish(publishRequest);
-            return "Feedback sent successfully";
-        } else {
-            throw new TopicNotFoundException(feedback.getType().toString());
-        }
+        PublishResult messagePublished = publishSns(feedback);
+        feedback.setIdMessage(UUID.fromString(messagePublished.getMessageId()));
+
+        createFeedbackDatabase(feedback);
+
+        return "Feedback sent successfully";
     }
 
     @Override
@@ -124,37 +106,30 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
         }
 
         // get queue URL by queue name
-        System.out.println("FIFO QUEUE");
-        System.out.println(feedbackType.label + ".fifo");
         String queueUrl = amazonSQSClient.getQueueUrl(feedbackType.label + ".fifo").getQueueUrl();
 
-        // receive messages from queue without deleting them
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl)
-                .withMaxNumberOfMessages(10) // maximum number of messages per request
-                .withVisibilityTimeout(0) // make messages visible to other consumers immediately after receiving them
-                .withWaitTimeSeconds(0) // do not wait for messages if queue is empty
-                .withMessageAttributeNames("All"); // get all message attributes, including type and status
-        ReceiveMessageResult receiveMessageResult = amazonSQSClient.receiveMessage(receiveMessageRequest);
+        ReceiveMessageRequest receivedMessage = receiveMessageRequest(queueUrl);
 
-        // convert messages to JSON array
+        ReceiveMessageResult receiveMessageResult = amazonSQSClient.receiveMessage(receivedMessage);
+
+        List<CustomerFeedbackResponseDTO> customerFeedbackResponseDTOS = getCustomerFeedbackResponseDTOS(receiveMessageResult);
+        // return JSON array as response body
+        return customerFeedbackResponseDTOS;
+    }
+
+    private static List<CustomerFeedbackResponseDTO> getCustomerFeedbackResponseDTOS(ReceiveMessageResult receiveMessageResult) {
         List<CustomerFeedbackResponseDTO> customerFeedbackResponseDTOS = new ArrayList<CustomerFeedbackResponseDTO>();
         for (Message message : receiveMessageResult.getMessages()) {
-            System.out.println("MESSAGE");
-            System.out.println(message.getAttributes());
-            System.out.println(message.getBody());
-            System.out.println(message.getMessageAttributes());
 
             CustomerFeedbackResponseDTO customerFeedbackResponseDTO = new CustomerFeedbackResponseDTO();
             customerFeedbackResponseDTO.setId(message.getMessageId());
             customerFeedbackResponseDTO.setType(FeedbackType.SUGGESTION.label);
             customerFeedbackResponseDTO.setMessage(message.getBody());
             customerFeedbackResponseDTO.setStatus(FeedbackStatus.IN_PROCESS.label);
+            customerFeedbackResponseDTO.setIdMessage(UUID.fromString(message.getMessageId()));
 
-            //jsonObject.put("type", message.getMessageAttributes().get("type").getStringValue());
-            //jsonObject.put("status", message.getMessageAttributes().get("status").getStringValue());
             customerFeedbackResponseDTOS.add(customerFeedbackResponseDTO);
         }
-        // return JSON array as response body
         return customerFeedbackResponseDTOS;
     }
 
@@ -165,5 +140,75 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
         CustomerFeedbackResponseDTO customer = new CustomerFeedbackResponseDTO(customerFeedbackModel);
 
         return customer;
+    }
+
+
+    @Override
+    public String getMessage(String type) {
+        String queueUrl = amazonSQSClient.getQueueUrl(type +".fifo").getQueueUrl();
+        ReceiveMessageRequest receivedMessage = receiveMessageRequest(queueUrl);
+
+        List<Message> messages = amazonSQSClient.receiveMessage(receivedMessage).getMessages();
+        Message messageToProcess = messages.get(0);
+        CustomerFeedbackResponseDTO customerResponse = new CustomerFeedbackResponseDTO();
+
+        messageToProcess.getAttributes();
+        messageToProcess.getBody();
+        messageToProcess.getMessageAttributes();
+        var receiptHandle =  messageToProcess.getReceiptHandle();
+
+        CustomerFeedbackResponseDTO customerFeedbackResponseDTO = new CustomerFeedbackResponseDTO();
+        customerResponse.setId(messageToProcess.getMessageId());
+        customerResponse.setType(FeedbackType.SUGGESTION.label);
+        customerResponse.setMessage(messageToProcess.getBody());
+        customerResponse.setStatus(FeedbackStatus.FINALIZED.label);
+
+        Optional<CustomerFeedbackModel> customerRepo = customerFeedbackRepository.findByMessageId(UUID.fromString(messageToProcess.getMessageId()));
+        if(customerRepo.isEmpty()) {
+            return null;
+        }
+
+        amazonSQSClient.deleteMessage(queueUrl,receiptHandle);
+
+        return "Message process successfully";
+    }
+
+    public ReceiveMessageRequest receiveMessageRequest(String queueUrl) {
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl)
+                .withMaxNumberOfMessages(10) // maximum number of messages per request
+                .withVisibilityTimeout(20) // make messages visible to other consumers immediately after receiving them
+                .withWaitTimeSeconds(20) // do not wait for messages if queue is empty
+                .withMessageAttributeNames("All"); // get all message attributes, including type and status
+        return receiveMessageRequest;
+    }
+
+    public PublishResult publishSns(CustomerFeedbackRequestDTO feedback) {
+        // get topic ARN by feedback type
+        String topicArn = amazonSNSClient.listTopics().getTopics().stream()
+                .filter(t -> t.getTopicArn().endsWith(feedback.getType().label + ".fifo"))
+                .findFirst()
+                .map(Topic::getTopicArn)
+                .orElse(null);
+        // publish feedback message to SNS topic
+        if (topicArn == null) {
+            throw new TopicNotFoundException(feedback.getType().toString());
+        }
+
+        PublishRequest publishRequest = new PublishRequest(topicArn, feedback.getMessage(), feedback.getType().toString())
+                .withMessageDeduplicationId(UUID.randomUUID().toString())
+                .withMessageGroupId(feedback.getType().label);
+        Map<String,MessageAttributeValue> messageAttributes = new HashMap<>();
+        MessageAttributeValue type = new MessageAttributeValue();
+        type.setDataType("String");
+        type.setStringValue(feedback.getType().toString());
+        messageAttributes.put("type", type);
+        MessageAttributeValue status = new MessageAttributeValue();
+        status.setDataType("String");
+        status.setStringValue("RECEIVED");
+        messageAttributes.put("status", status);
+        publishRequest.setMessageAttributes(messageAttributes);
+
+        PublishResult publishedMessage = amazonSNSClient.publish(publishRequest);
+        return publishedMessage;
     }
 }
