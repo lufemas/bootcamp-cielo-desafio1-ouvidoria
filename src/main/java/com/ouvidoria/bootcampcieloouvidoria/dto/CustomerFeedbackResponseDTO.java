@@ -26,11 +26,13 @@ public class CustomerFeedbackResponseDTO {
     @NotBlank
     private String status;
 
+    private UUID idMessage;
     public CustomerFeedbackResponseDTO(CustomerFeedbackModel customer) {
         this.message = customer.getMessage();
         this.type = customer.getType();
         this.id = String.valueOf(customer.getIdFeedback());
         this.status = customer.getStatus();
+        this.idMessage = customer.getMessageId();
     }
 
 
