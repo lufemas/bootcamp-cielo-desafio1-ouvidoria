@@ -166,4 +166,36 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
 
         return customer;
     }
+
+    @Override
+    public List<CustomerFeedbackResponseDTO> getMessage() {
+        String suggestionQueueUrl = amazonSQSClient.getQueueUrl("Suggestion.fifo").getQueueUrl();
+
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(suggestionQueueUrl)
+                .withMaxNumberOfMessages(10) // maximum number of messages per request
+                .withVisibilityTimeout(20) // make messages visible to other consumers immediately after receiving them
+                .withWaitTimeSeconds(20) // do not wait for messages if queue is empty
+                .withMessageAttributeNames("All"); // get all message attributes, including type and status
+        ReceiveMessageResult receiveMessageResult = amazonSQSClient.receiveMessage(receiveMessageRequest);
+
+        // convert messages to JSON array
+        List<CustomerFeedbackResponseDTO> customerFeedbackResponseDTOS = new ArrayList<CustomerFeedbackResponseDTO>();
+        for (Message message : receiveMessageResult.getMessages()) {
+            System.out.println("MESSAGE");
+            System.out.println(message.getAttributes());
+            System.out.println(message.getBody());
+            System.out.println(message.getMessageAttributes());
+
+            CustomerFeedbackResponseDTO customerFeedbackResponseDTO = new CustomerFeedbackResponseDTO();
+            customerFeedbackResponseDTO.setId(message.getMessageId());
+            customerFeedbackResponseDTO.setType(FeedbackType.SUGGESTION.label);
+            customerFeedbackResponseDTO.setMessage(message.getBody());
+            customerFeedbackResponseDTO.setStatus(FeedbackStatus.IN_PROCESS.label);
+
+            //jsonObject.put("type", message.getMessageAttributes().get("type").getStringValue());
+            //jsonObject.put("status", message.getMessageAttributes().get("status").getStringValue());
+            customerFeedbackResponseDTOS.add(customerFeedbackResponseDTO);
+        }
+        return customerFeedbackResponseDTOS;
+    }
 }

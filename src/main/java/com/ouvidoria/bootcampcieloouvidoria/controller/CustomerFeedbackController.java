@@ -37,4 +37,9 @@ public class CustomerFeedbackController {
     public ResponseEntity<List<CustomerFeedbackResponseDTO>> getQueuedFeedbackByType(@PathVariable String type) {
         return new ResponseEntity<>(customerFeedbackService.getQueuedFeedbackByType(type), HttpStatus.OK);
     }
+
+    @GetMapping("/message")
+    public ResponseEntity<List<CustomerFeedbackResponseDTO>> getMessage() {
+        return new ResponseEntity<>(customerFeedbackService.getMessage(), HttpStatus.OK);
+    }
 }

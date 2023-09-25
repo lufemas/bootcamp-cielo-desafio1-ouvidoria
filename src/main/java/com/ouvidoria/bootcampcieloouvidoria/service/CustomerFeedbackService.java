@@ -16,4 +16,6 @@ public interface CustomerFeedbackService {
     List<CustomerFeedbackResponseDTO> getQueuedFeedbackByType(String type);
 
     CustomerFeedbackResponseDTO createFeedbackDatabase(CustomerFeedbackRequestDTO feedback);
+
+    List<CustomerFeedbackResponseDTO> getMessage();
 }
