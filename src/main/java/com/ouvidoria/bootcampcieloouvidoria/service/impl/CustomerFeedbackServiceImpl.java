@@ -168,34 +168,36 @@ public class CustomerFeedbackServiceImpl implements CustomerFeedbackService {
     }
 
     @Override
-    public List<CustomerFeedbackResponseDTO> getMessage() {
-        String suggestionQueueUrl = amazonSQSClient.getQueueUrl("Suggestion.fifo").getQueueUrl();
+    public List<CustomerFeedbackResponseDTO> getMessage(String type) {
+        String queueUrl = amazonSQSClient.getQueueUrl(type +".fifo").getQueueUrl();
 
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(suggestionQueueUrl)
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest(queueUrl)
                 .withMaxNumberOfMessages(10) // maximum number of messages per request
                 .withVisibilityTimeout(20) // make messages visible to other consumers immediately after receiving them
                 .withWaitTimeSeconds(20) // do not wait for messages if queue is empty
                 .withMessageAttributeNames("All"); // get all message attributes, including type and status
-        ReceiveMessageResult receiveMessageResult = amazonSQSClient.receiveMessage(receiveMessageRequest);
 
-        // convert messages to JSON array
-        List<CustomerFeedbackResponseDTO> customerFeedbackResponseDTOS = new ArrayList<CustomerFeedbackResponseDTO>();
-        for (Message message : receiveMessageResult.getMessages()) {
-            System.out.println("MESSAGE");
-            System.out.println(message.getAttributes());
-            System.out.println(message.getBody());
-            System.out.println(message.getMessageAttributes());
+        List<Message> messages = amazonSQSClient.receiveMessage(receiveMessageRequest).getMessages();
+        Message messageToProcess = messages.get(0);
+        System.out.println(messageToProcess);
+        CustomerFeedbackResponseDTO customerResponse = new CustomerFeedbackResponseDTO();
 
-            CustomerFeedbackResponseDTO customerFeedbackResponseDTO = new CustomerFeedbackResponseDTO();
-            customerFeedbackResponseDTO.setId(message.getMessageId());
-            customerFeedbackResponseDTO.setType(FeedbackType.SUGGESTION.label);
-            customerFeedbackResponseDTO.setMessage(message.getBody());
-            customerFeedbackResponseDTO.setStatus(FeedbackStatus.IN_PROCESS.label);
+        System.out.println(messageToProcess.getAttributes());
+        System.out.println(messageToProcess.getBody());
+        System.out.println(messageToProcess.getMessageAttributes());
+        var receiptHandle =  messageToProcess.getReceiptHandle();
 
-            //jsonObject.put("type", message.getMessageAttributes().get("type").getStringValue());
-            //jsonObject.put("status", message.getMessageAttributes().get("status").getStringValue());
-            customerFeedbackResponseDTOS.add(customerFeedbackResponseDTO);
-        }
-        return customerFeedbackResponseDTOS;
+        CustomerFeedbackResponseDTO customerFeedbackResponseDTO = new CustomerFeedbackResponseDTO();
+        customerResponse.setId(messageToProcess.getMessageId());
+        customerResponse.setType(FeedbackType.SUGGESTION.label);
+        customerResponse.setMessage(messageToProcess.getBody());
+        customerResponse.setStatus(FeedbackStatus.FINALIZED.label);
+
+        var deleteMessage = amazonSQSClient.deleteMessage(queueUrl,receiptHandle);
+
+        System.out.println(deleteMessage);
+
+
+        return null;
     }
 }

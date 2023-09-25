@@ -17,5 +17,5 @@ public interface CustomerFeedbackService {
 
     CustomerFeedbackResponseDTO createFeedbackDatabase(CustomerFeedbackRequestDTO feedback);
 
-    List<CustomerFeedbackResponseDTO> getMessage();
+    List<CustomerFeedbackResponseDTO> getMessage(String type);
 }
