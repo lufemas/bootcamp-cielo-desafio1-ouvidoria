@@ -1,5 +1,7 @@
 ### bootcamp-cielo-desafio1-ouvidoria
 
+OBS: frontend está na pasta frontend com o readme próprio.
+
 ### Necessário:
 
 - Docker
